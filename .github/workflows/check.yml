@@ -5,8 +5,7 @@ on:
     types:
       - created
 
-permissions:
-  contents: write
+permissions: write-all
 
 jobs:
   build:
@@ -53,6 +52,7 @@ jobs:
           ref: ${{ steps.getRef.outputs.pr_ref }}
  
       - name: Run a long task
+        id: long_task
         run: |
           echo "Deploying ..."
  
@@ -93,3 +93,49 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
           NODE_ID: ${{ github.event.comment.node_id }}
+
+
+# - uses: actions/github-script@v6
+      #   if: ${{ steps.long_task.result == 'success' }}
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       let body = `
+      #       # 🤖 \n`;
+
+      #       let result = '❌ failed! \n';
+
+      #       body += result;
+
+      #       if (PR_NUMBER) {
+      #         github.rest.issues.createComment({
+      #           issue_number: PR_NUMBER,
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           body
+      #         });
+      #       }
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.issue.number }}
+
+      # - uses: actions/github-script@v6
+      #   if: ${{ steps.long_task.result == 'failure' }}
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       let body = `# 🤖 \n`;
+      #       let result = '✅ success! \n';
+      #       body += result;
+
+      #       if (PR_NUMBER) {
+      #         github.rest.issues.createComment({
+      #           issue_number: PR_NUMBER,
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo,
+      #           body
+      #         });
+      #       }
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.issue.number }}

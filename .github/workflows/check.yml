@@ -8,8 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.pull_request && contain(github.event.comment.body, '/comment') }}
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/comment') }}
     steps:
       - name: Deploy
         run: |
-          echo "Deploying ..."
+          echo "Deploying..."

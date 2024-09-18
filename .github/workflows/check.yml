@@ -8,31 +8,17 @@ on:
 permissions: write-all
 
 jobs:
-  build:
-    name: A long job that only runs on a specific PR comment
+  test-job-1:
+    name: Test job 1
     runs-on: ubuntu-latest
     if: ${{ github.event.issue.pull_request && github.event.comment.body == '/build' }}
     steps:
-      - name: Put a reaction to the comment
-        run: gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_ID: ${{ github.event.comment.node_id }}
- 
       - name: Check if PR is open
         run: |
           STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json state --jq .state)
           if [ "$STATE" != "OPEN" ]; then
-            echo "Cannot build for closed PRs"
-            (
-              echo "**${{ github.workflow }}**"
-              echo "Cannot build Kuby for a closed PR. Use the `latest` version (built for the `master` branch) or create a new PR."
-            ) | \
-            gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -
-            gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_DOWN}){reaction{content}subject{id}}}"
-            gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
             exit 1
-          fi          
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
@@ -51,34 +37,86 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.getRef.outputs.pr_ref }}
  
-      - name: Run a long task
+      - name: Run tests
         id: long_task
         run: |
           # npm ci --ignore-scripts
-          # npm test
-          exit 1
- 
-      - name: Final Comment
+          npm run test1
+    
+  test-job-2:
+    name: Test job 2
+    runs-on: ubuntu-latest
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/build' }}
+    steps:
+      - name: Check if PR is open
         run: |
-          gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_UP}){reaction{content}subject{id}}}"
-          gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
-          (
-            echo "**${{ github.workflow }}**"
-            echo "The long task is done!"
-            echo
-            echo "You can find the workflow here:"
-            echo "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          ) | \
-          gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -          
+          STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json state --jq .state)
+          if [ "$STATE" != "OPEN" ]; then
+            exit 1
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
           NODE_ID: ${{ github.event.comment.node_id }}
 
+      - name: Get PR HEAD Ref
+        id: getRef
+        run: echo "pr_ref=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json headRefOid | jq -r '.headRefOid')" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
+      - name: Checkout source code from Github
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.getRef.outputs.pr_ref }}
+
+      - name: Run tests
+        id: long_task
+        run: |
+          # npm ci --ignore-scripts
+          npm run test2
+
+  test-job-3:
+    name: Test job 3
+    runs-on: ubuntu-latest
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/build' }}
+    steps:
+      - name: Check if PR is open
+        run: |
+          STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json state --jq .state)
+          if [ "$STATE" != "OPEN" ]; then
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          NODE_ID: ${{ github.event.comment.node_id }}
+
+      - name: Get PR HEAD Ref
+        id: getRef
+        run: echo "pr_ref=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json headRefOid | jq -r '.headRefOid')" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
+      - name: Checkout source code from Github
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.getRef.outputs.pr_ref }}
+
+      - name: Run tests
+        id: long_task
+        run: |
+          # npm ci --ignore-scripts
+          npm run test3
+
   notify-job:
     permissions: write-all
     runs-on: ubuntu-latest
-    needs: build
+    needs: [test-job-1,test-job-2,test-job-3]
     if: always()
     steps:
       - name: Notify on Failure

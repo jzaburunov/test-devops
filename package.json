@@ -1,0 +1,14 @@
+{
+  "name": "devops",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo specify some tests",
+    "test1": "echo \"test 1 run\" && exit 1",
+    "test2": "echo \"test 2 run\" && exit 1",
+    "test3": "echo \"test 3 run\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

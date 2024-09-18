@@ -119,39 +119,63 @@ jobs:
     needs: [test-job-1,test-job-2,test-job-3]
     if: always()
     steps:
-      - name: Notify on Failure
-        if: ${{ contains(needs.build.result, 'failure') }}
-        run: |
-          gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_DOWN}){reaction{content}subject{id}}}"
-          gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
-          (
-            echo "**${{ github.workflow }}**"
-            echo "**❌ Something went wrong!**"
-            echo
-            echo "**Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          ) | \
-          gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -          
+      - uses: actions/github-script@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-          NODE_ID: ${{ github.event.comment.node_id }}
+          TEST1: ${{ needs.test-job-1.result == 'success' && 'Tests 1 is ok ✅' || 'Tests 1 is not ok ❌' }}
+          TEST2: ${{ needs.test-job-2.result == 'success' && 'Tests 2 is ok ✅' || 'Tests 2 is not ok ❌' }}
+          TEST3: ${{ needs.test-job-3.result == 'success' && 'Tests 3 is ok ✅' || 'Tests 3 is not ok ❌' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const actions = [
+              process.env.TEST1,
+              process.env.TEST2,
+              process.env.TEST3,
+            ];
 
-      - name: Notify on Success
-        if: ${{ contains(needs.build.result, 'success') }}
-        run: |
-          echo "Success ..."
-          # gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_UP}){reaction{content}subject{id}}}"
-          # gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
-          (
-            echo "**${{ github.workflow }}**"
-            echo "**✅ All is ok!**"
-            echo
-            echo "**Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          ) | \
-          gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -          
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-          NODE_ID: ${{ github.event.comment.node_id }}
+            const body = `**${actions.join('\n')}**`;
+
+            if (actions.length) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            }
+      # - name: Notify on Failure
+      #   if: ${{ contains(needs.build.result, 'failure') }}
+      #   run: |
+      #     gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_DOWN}){reaction{content}subject{id}}}"
+      #     gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
+      #     (
+      #       echo "**${{ github.workflow }}**"
+      #       echo "**❌ Something went wrong!**"
+      #       echo
+      #       echo "**Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #     ) | \
+      #     gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -          
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.issue.number }}
+      #     NODE_ID: ${{ github.event.comment.node_id }}
+
+      # - name: Notify on Success
+      #   if: ${{ contains(needs.build.result, 'success') }}
+      #   run: |
+      #     echo "Success ..."
+      #     # gh api graphql --silent --raw-field query="mutation AddReaction {addReaction(input:{subjectId:\"$NODE_ID\",content:THUMBS_UP}){reaction{content}subject{id}}}"
+      #     # gh api graphql --silent --raw-field query="mutation RemoveReaction {removeReaction(input:{subjectId:\"$NODE_ID\",content:EYES}){reaction{content}subject{id}}}"
+      #     (
+      #       echo "**${{ github.workflow }}**"
+      #       echo "**✅ All is ok!**"
+      #       echo
+      #       echo "**Details:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #     ) | \
+      #     gh pr comment "${PR_NUMBER}" --repo ${{ github.repository }} -F -          
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     PR_NUMBER: ${{ github.event.issue.number }}
+      #     NODE_ID: ${{ github.event.comment.node_id }}
     
       
